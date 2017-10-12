@@ -15,15 +15,19 @@ if not os.path.exists(path_to_save):
 debugging=False
 
 #______LOAD DATA AND SIM, AND APPLY CUTS
-data_ori = pd.read_csv('../../../data_and_sim/DESALL_fitted_myself/FITOPT000.FITRES',
+data_ori = pd.read_csv('../../../data_and_sim/SMP_SPEC_v1/FITOPT000.FITRES',
                        index_col=False, comment='#',delimiter=' ')
+# print data_ori
+
 tmp = data_ori[(data_ori['c'] > -0.3) & (data_ori['c'] < 0.3) & (data_ori['x1'] > -3) & (data_ori['x1']
                                                                                          < 3) & (data_ori['z'] > 0.05) & (data_ori['z'] < 0.9) & (data_ori['FITPROB'] > 1E-05)]
 tmp2 = tmp[tmp.columns.values[:-1]]
 #Selecting type Ias!
-data=tmp2[tmp2['TYPE']==1]
+# data=tmp2[tmp2['TYPE']==1]
+#with SMP we don't have this issue
+data = tmp2
 
-sim = pd.read_csv('../sim/NEFF/FITOPT000.FITRES',
+sim = pd.read_csv('FITOPT000.FITRES',
                   index_col=False, comment='#', delimiter=' ')
 tmp2 = sim[(sim['c'] > -0.3) & (sim['c'] < 0.3) & (sim['x1'] > -3) & (sim['x1'] < 3)
            & (sim['z'] > 0.05) & (sim['z'] < 0.9) & (sim['FITPROB'] > 1E-05)]
@@ -59,12 +63,12 @@ def initial_plots(norm_bin):
         err_sim = []
         for ibin in range(nbins - 1):
             # data
-            bin_elements_dat = np.take(data[var],np.where(
+            bin_elements_dat = np.take(data[var].values,np.where(
                 index_of_bin_belonging_to_dat == ibin)[0])
             error_dat = np.sqrt(len(bin_elements_dat))
             err_dat.append(error_dat)
             # sim
-            bin_elements_sim = np.take(sim[var],np.where(index_of_bin_belonging_to_sim == ibin)[0])
+            bin_elements_sim = np.take(sim[var].values,np.where(index_of_bin_belonging_to_sim == ibin)[0])
             error_sim = np.sqrt(len(bin_elements_sim))
             err_sim.append(error_sim)
             del bin_elements_sim, bin_elements_dat
@@ -149,7 +153,8 @@ def plots_vs_z():
     z_bins_plot=np.arange(min_z+half_z_bin_step,max_z-half_z_bin_step,z_bin_step)
     color_dic={'data':'red','sim':'blue'}
 
-    Mb_arr=np.ones(len(z_bins)-1)*(19.4)
+    Mb=19.05
+    Mb_arr=np.ones(len(z_bins)-1)*(Mb)
     alpha=0.144 #from sim
     beta=3.1
 
@@ -157,7 +162,7 @@ def plots_vs_z():
     mean_mu_arr=[]
     mean_z_arr=[]
     err_mu_arr=[]
-    sim['new_mu']=np.array(sim['mB'])+19.38+np.array(alpha*sim['x1'])-np.array(beta*sim['c'])-np.array(dist_mu(sim['z']))
+    sim['new_mu']=np.array(sim['mB'])+Mb+np.array(alpha*sim['x1'])-np.array(beta*sim['c'])-np.array(dist_mu(sim['z']))
     for i, z_bin in enumerate(z_bins[:-1]):
             binned_indices=sim[(sim['z'] >= z_bin) & (sim['z'] < z_bins[i + 1])].index.tolist()
             binned_mu=sim['new_mu'][binned_indices]
@@ -170,7 +175,7 @@ def plots_vs_z():
     plt.errorbar(mean_z_arr,mean_mu_arr,yerr=np.array(err_mu_arr),fmt='o')
     plt.xlabel('z')
     plt.ylabel('bias correction')
-    plt.title('mB+19.38+alpha*x1-beta*c-dist_mu(z)')
+    plt.title('mB+%s+alpha*x1-beta*c-dist_mu(z)'%Mb)
     plt.savefig('%s/bias.png'%path_to_save)
     del fig
 

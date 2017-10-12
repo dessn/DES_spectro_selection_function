@@ -128,10 +128,10 @@ def fit_MCMC(d_param):
     samples = sampler.chain[:, nburn:, :].reshape((-1, ndim))
     plot_MCMC_results(xdata, ydata, samples)
 
-    import corner
-    plt.clf()
-    fig = corner.corner(samples, labels=list_key,quantiles=[0.5],bins=50)
-    fig.savefig(path_to_save+'/triangle_' + filt + ".png")
+    # import corner
+    # plt.clf()
+    # fig = corner.corner(samples, labels=list_key,quantiles=[0.5],bins=50)
+    # fig.savefig(path_to_save+'/triangle_' + filt + ".png")
 
     A_mcmc, alpha_mcmc, beta_mcmc = map(lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
                                         zip(*np.percentile(samples, [16, 50, 84],
