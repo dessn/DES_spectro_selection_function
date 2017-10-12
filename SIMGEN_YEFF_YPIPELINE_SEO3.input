@@ -2,7 +2,7 @@
 SIMLIB_FILE: $SNDATA_ROOT/INTERNAL/DES/simlibs/DES_DIFFIMG.SIMLIB 
 #SOLID_ANGLE: 0.00913851     	# 6 sq deg (steridian) for deep field + 24 sq deg (steridian) for shallow
 SIMLIB_FIELDLIST:  X3+C3+E1+E2+S1+S2+C1+C2+X1+X2 #all DES fields, should include solid angle inside
-NGEN_SEASON: 3.0    # 3 seasons
+NGEN_SEASON: 1.0    # 3 seasons
 
 # ----------------- sim setup  ---------------
 GENVERSION:  AMDES_YEFF_YPIPELINE_SEO3    # SNDATA version to generate
@@ -79,8 +79,8 @@ CUTWIN_T0GAPMAX: 0 20.
 NEWMJD_DIF:  0.4  #days.  Ensures multiple epochs needed for trigger
 
 # cosmological params for lightcurve generation and redshift distribution
-OMEGA_MATTER:  0.27
-OMEGA_LAMBDA:  0.73
+OMEGA_MATTER:  0.295
+OMEGA_LAMBDA:  0.705
 W0_LAMBDA:    -1.00
 H0:           70.0   
 

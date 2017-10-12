@@ -14,17 +14,17 @@ if not os.path.exists(path_to_save):
 debugging=True
 
 #______LOAD DATA AND SIM, APPLY CUTS
-data_ori = pd.read_csv('../../../data_and_sim/DESALL_fitted_myself/FITOPT000.FITRES',
+data_ori = pd.read_csv('../../../data_and_sim/SMP_SPEC_v1/FITOPT000.FITRES',
                        index_col=False, comment='#',delimiter=' ')
 tmp = data_ori[(data_ori['c'] > -0.3) & (data_ori['c'] < 0.3) & (data_ori['x1'] > -3) & (data_ori['x1']
                                                                                          < 3) & (data_ori['z'] > 0.05) & (data_ori['z'] < 0.9) & (data_ori['FITPROB'] > 1E-05)]
 tmp2 = tmp[tmp.columns.values[:-1]]
 #only Ias!!!!
-data=tmp2[tmp2['TYPE']==1]
+data=tmp2
 
 print 'SNe in the sample', len(data)
 
-sim = pd.read_csv('../sim/YEFF/FITOPT000.FITRES',
+sim = pd.read_csv('FITOPT000.FITRES',
                   index_col=False, comment='#', delimiter=' ')
 tmp2 = sim[(sim['c'] > -0.3) & (sim['c'] < 0.3) & (sim['x1'] > -3) & (sim['x1'] < 3)
            & (sim['z'] > 0.05) & (sim['z'] < 0.9) & (sim['FITPROB'] > 1E-05)]
@@ -46,6 +46,12 @@ MC_vs_z={}
 MC_vs_z['c']=pd.read_csv('../../../2017_MATS_cx1_z/sim_c_v_z_28022017.txt', delimiter=' ')
 MC_vs_z['x1']=pd.read_csv('../../../2017_MATS_cx1_z/sim_x1_v_z_28022017.txt', delimiter=' ')
 
+# MC bias 23/04/17
+# MC_bias = pd.read_csv('../../4comparing_baseline_CM_SNLS_byCLidman/bias_MC.tsv',
+#                   index_col=False, comment='#',delimiter=' ')
+# MC bias 13/06/17
+MC_bias = pd.read_csv('../../1111111_Chris_20170613/mu_bias_v1.3.3.dat',
+                  index_col=False, comment='#',delimiter=' ')
 
 def finding_norm_bin_histos(var):
     '''
@@ -91,12 +97,11 @@ def histograms(var,norm_bin,chi):
     err_sim = []
     for ibin in range(nbins - 1):
         # data
-        bin_elements_dat = np.take(data[var],np.where(
-            index_of_bin_belonging_to_dat == ibin)[0])
+        bin_elements_dat = np.take(data[var].values,np.where(index_of_bin_belonging_to_dat == ibin)[0])
         error_dat = np.sqrt(len(bin_elements_dat))
         err_dat.append(error_dat)
         # sim
-        bin_elements_sim = np.take(sim[var],np.where(index_of_bin_belonging_to_sim == ibin)[0])
+        bin_elements_sim = np.take(sim[var].values,np.where(index_of_bin_belonging_to_sim == ibin)[0])
         error_sim = np.sqrt(len(bin_elements_sim))
         err_sim.append(error_sim)
         del bin_elements_sim, bin_elements_dat
@@ -122,7 +127,7 @@ def histograms(var,norm_bin,chi):
     plt.title('chi square=%f'%float(chi))
     if var=='c':
         plt.title('chi square=%f, not used the close to zero bins'%float(chi))
-    plt.legend()
+    plt.legend(loc='best')
     plt.savefig('%s/hist_%s.png' % (path_to_save,var))
     del fig
 
@@ -236,28 +241,73 @@ def plots_vs_z():
     color_dic={'data':'red','sim':'blue'}
 
     #constants
-    Mb_arr=np.ones(len(z_bins)-1)*(19.38)
+    #instead of using fixed MB will use sim_
     alpha=0.144 #from sim
     beta=3.1
+
+    Mb=19.365
+    Mb_arr=np.ones(len(z_bins)-1)*(Mb)
+    #how do we find this Mb?
+    #find offset such that the mu_true goes thorugh zero
+    # del fig
+    fig2=plt.figure()
+    mu_true= 19.365 + np.array(sim['SIM_mB'])+ np.array(sim['SIM_x1'])*alpha - np.array(sim['SIM_c'])*beta - sim['SIM_DLMAG']
+    #BEWARE!!!!! dist_mu(sim['SIM_ZCMB']) is not equvalent to sim_DL WHY?????????
+    plt.scatter(sim['SIM_ZCMB'],dist_mu(sim['SIM_ZCMB']) - sim['SIM_DLMAG'], color='red')
+    # plt.scatter(sim['z'],dist_mu(sim['zCMB']) - sim['SIM_DLMAG'], color='blue' )
+    # plt.scatter(sim['z'],dist_mu(sim['z']) - sim['SIM_DLMAG'], color='orange' )
+    # plt.hist(sim['z']-sim['zCMB'])
+    # plt.hist(sim['zHD']-sim['zCMB'])    
+    plt.savefig('test2.png')
+    # print dist_mu(0.8)
+    # print sim[(sim['zCMB']<0.81) & (sim['zCMB']>0.79)][['zCMB','SIM_DLMAG']]
+    sim['mu_SIM_ZCMB']=np.array(dist_mu(sim['SIM_ZCMB']))    
+    sim['mu_ZCMB']=np.array(dist_mu(sim['zCMB']))
+    sim['mu_zHD']=np.array(dist_mu(sim['zHD']))
+    sim['mu_z']=np.array(dist_mu(sim['z']))
+    # exit()
+    # print sim[['SIM_zCMB','zCMB']]#,'zHD','z','SIM_DLMAG','mu_SIM_ZCMB','mu_zCMB','mu_zHD','mu_z','mu_SIM_DLMAG','mB','VPEC']]
+    sim.to_csv('fun_for_Mat.csv',columns=['SIM_ZCMB','zCMB','zHD','z','SIM_DLMAG','mu_SIM_ZCMB','mu_ZCMB','mu_zHD','mu_z','mB','VPEC'])
+    exit()
+
 
     #Bias correction
     mean_mu_arr=[]
     mean_z_arr=[]
     err_mu_arr=[]
-    sim['new_mu']=np.array(sim['mB'])+19.38+np.array(alpha*sim['x1'])-np.array(beta*sim['c'])-np.array(dist_mu(sim['z']))
+    mean_mu_arr2=[]
+    mean_mu_arr3=[]
+
+    sim['new_mu']=np.array(sim['mB'])+Mb+np.array(alpha*sim['x1'])-np.array(beta*sim['c'])-sim['SIM_DLMAG']#np.array(dist_mu(sim['z']))
+    # sim['new_mu_zCMB']=np.array(sim['mB'])+Mb+np.array(alpha*sim['x1'])-np.array(beta*sim['c'])-np.array(dist_mu(sim['zCMB']))
+    # sim['new_mu_zHD']=np.array(sim['mB'])+Mb+np.array(alpha*sim['x1'])-np.array(beta*sim['c'])-np.array(dist_mu(sim['zHD']))
     for i, z_bin in enumerate(z_bins[:-1]):
             binned_indices=sim[(sim['z'] >= z_bin) & (sim['z'] < z_bins[i + 1])].index.tolist()
+            mean_z=z_bin+(z_bins[i+1]-z_bin)/2.
+            mean_z_arr.append(mean_z)
+
             binned_mu=sim['new_mu'][binned_indices]
             mean_mu=np.mean(binned_mu)
-            mean_z=z_bin+(z_bins[i+1]-z_bin)/2.
-            err_mu_arr=np.sqrt(np.power(err_dic['sim']['mB'],2)+alpha*np.power(err_dic['sim']['x1'],2)+beta*np.power(err_dic['sim']['c'],2))
+            err_mu_arr=np.sqrt(np.power(err_dic['sim']['mB'],2)+np.power(alpha,2)*np.power(err_dic['sim']['x1'],2)+np.power(beta,2)*np.power(err_dic['sim']['c'],2))
             mean_mu_arr.append(mean_mu)
-            mean_z_arr.append(mean_z)
+
+            # binned_mu2=sim['new_mu_zCMB'][binned_indices]
+            # mean_mu2=np.mean(binned_mu2)
+            # mean_mu_arr2.append(mean_mu2)
+
+            # binned_mu3=sim['new_mu_zCMB'][binned_indices]
+            # mean_mu3=np.mean(binned_mu3)
+            # mean_mu_arr3.append(mean_mu3)
+            
     fig=plt.figure()
-    plt.errorbar(mean_z_arr,mean_mu_arr,yerr=np.array(err_mu_arr),fmt='o')
+    plt.errorbar(mean_z_arr,mean_mu_arr,yerr=np.array(err_mu_arr),fmt='o',label='z')
+    # plt.errorbar(mean_z_arr,mean_mu_arr2,yerr=np.array(err_mu_arr),fmt='o',label='zCMB')
+    # plt.errorbar(mean_z_arr,mean_mu_arr3,yerr=np.array(err_mu_arr),fmt='o',label='zHD')
+    plt.errorbar(MC_bias['redshift'],MC_bias['bias'],yerr=np.array(MC_bias['error']),fmt='o',color='gray',label='MC')
     plt.xlabel('z')
     plt.ylabel('bias correction')
-    plt.title('mB+19.38+alpha*x1-beta*c-dist_mu(z)')
+    plt.legend(loc='best')
+    plt.title('mB+%s+alpha*x1-beta*c-dlmag'%Mb)
     plt.savefig('./plots/bias.png')
     del fig
     #save bias correction in txt file
@@ -281,7 +331,7 @@ def plots_vs_z():
     plt.ylabel('%s x1'%alpha)
     plt.xlim(0,max_z+half_z_bin_step)
     plt.xlabel('z')
-    plt.legend()
+    plt.legend(loc='best')
     plt.savefig('%s/evol_alpha_x1.png'%path_to_save)
     del fig
 
@@ -297,7 +347,7 @@ def plots_vs_z():
     plt.ylabel(' %s c'%beta)
     plt.xlim(0,max_z+half_z_bin_step)
     plt.xlabel('z')  
-    plt.legend()  
+    plt.legend(loc='best')  
     plt.savefig('%s/evol_beta_c.png'%path_to_save)
     del fig
 
@@ -321,7 +371,7 @@ def plots_vs_z():
     plt.xlim(0,max_z+half_z_bin_step)
     plt.ylabel('x1')
     plt.xlabel('z')
-    plt.legend()
+    plt.legend(loc='best')
     plt.savefig('%s/evol_x1_z.png'%path_to_save)
     del fig
 
@@ -335,7 +385,7 @@ def plots_vs_z():
     plt.xlim(0,max_z+half_z_bin_step)
     plt.ylabel('c')
     plt.xlabel('z')
-    plt.legend()
+    plt.legend(loc='best')
     plt.savefig('%s/evol_c_z.png'%path_to_save)
     del fig
 
@@ -346,7 +396,7 @@ def plots_vs_z():
         fig=plt.errorbar(z_bins_plot,mean_dic['data_deep']['c'],yerr=err_dic['data_deep']['c'],fmt='o',color='magenta',label='data deep')
         fig=plt.errorbar(z_bins_plot,mean_dic['sim']['c'],yerr=err_dic['sim']['c'],fmt='o',color='blue',label='sim')
         fig=plt.scatter(MC_vs_z['c']['z'],MC_vs_z['c']['c'],label='MC sim',color='grey')
-        plt.legend()
+        plt.legend(loc='best')
         plt.xlabel('z')
         plt.ylabel('c')
         plt.ylim(-0.15,.15)
@@ -358,7 +408,7 @@ def plots_vs_z():
         fig=plt.errorbar(z_bins_plot,mean_dic['data_deep']['x1'],yerr=err_dic['data_deep']['x1'],fmt='o',color='magenta',label='data deep')
         fig=plt.errorbar(z_bins_plot,mean_dic['sim']['x1'],yerr=err_dic['sim']['x1'],fmt='o',color='blue',label='sim')
         fig=plt.scatter(MC_vs_z['x1']['z'],MC_vs_z['x1']['x1'],label='MC sim',color='grey')
-        plt.legend()
+        plt.legend(loc='best')
         plt.xlabel('z')
         plt.ylabel('x1')
         plt.ylim(-1.5,2)
@@ -392,7 +442,7 @@ def mag_histos(filt,norm_bin,min_mag,nbins):
     n_data, bins_data, patches_data = plt.hist(
         data[var],bins_sim, fill=True,alpha=0.4,color='red',label='data')
     # plt.errorbar(bincenters, y_data, fmt='o',color='black', yerr=error_arr_data)
-    plt.legend()
+    plt.legend(loc='best')
     plt.xlabel(var)
     plt.savefig(path_to_save + 'histo_' + var + '.png')
     # division
